@@ -14,7 +14,9 @@ st.write(
 
 from gtda.homology import VietorisRipsPersistence
 
-VR = VietorisRipsPersistence(homology_dimensions=[0, 1, 2])  # Parameter explained in the text
+VR = VietorisRipsPersistence(
+    homology_dimensions=[0, 1, 2]
+)  # Parameter explained in the text
 diagrams = VR.fit_transform(point_clouds)
 st.write(diagrams.shape)
 
@@ -23,14 +25,12 @@ from gtda.plotting import plot_diagram
 st.plotly_chart(plot_diagram(diagrams[i]))
 
 import numpy as np
+
 np.random.seed(seed=42)
 from gtda.homology import VietorisRipsPersistence
 from sklearn.datasets import make_circles
 
-X = np.asarray([
-    make_circles(100, factor=np.random.random())[0]
-    for i in range(10)
-])
+X = np.asarray([make_circles(100, factor=np.random.random())[0] for i in range(10)])
 from gtda.plotting import plot_point_cloud
 
 VR = VietorisRipsPersistence()
@@ -55,7 +55,7 @@ from gtda.mapper import (
     Projection,
     plot_static_mapper_graph,
     plot_interactive_mapper_graph,
-    MapperInteractivePlotter
+    MapperInteractivePlotter,
 )
 
 # ML tools
@@ -67,12 +67,12 @@ data, _ = datasets.make_circles(n_samples=5000, noise=0.05, factor=0.3, random_s
 
 st.plotly_chart(plot_point_cloud(data))
 
-#from gtda.mapper.filter import FilterFunctionName
-#from gtda.mapper.cover import CoverName
+# from gtda.mapper.filter import FilterFunctionName
+# from gtda.mapper.cover import CoverName
 # scikit-learn method
-#from sklearn.cluster import ClusteringAlgorithm
+# from sklearn.cluster import ClusteringAlgorithm
 # giotto-tda method
-#from gtda.mapper.cluster import FirstSimpleGap
+# from gtda.mapper.cluster import FirstSimpleGap
 
 # Define filter function – can be any scikit-learn transformer
 filter_func = Projection(columns=[0, 1])
