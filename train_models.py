@@ -185,8 +185,5 @@ def main(i):
 
 if __name__ == "__main__":
     number_of_cores = cpu_count()
-    model = Net()
-    test = "test"
-    torch.save(model.state_dict(), f"models/mnist_cnn_{test}.pt")
     Parallel(n_jobs=number_of_cores)(delayed(main)(i) for i in range(100))
 
