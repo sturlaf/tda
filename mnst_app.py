@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 import torch
 from sklearn.cluster import DBSCAN
@@ -21,7 +22,7 @@ with st.sidebar:
     )
     project = st.slider("Select col to project onto", min_value=0, max_value=8, value=0)
     n_intervals = st.slider(
-        "Select nr of clusters", min_value=2, max_value=32, value=12
+        "Select nr of clusters", min_value=2, max_value=300, value=12
     )
 from data.generate_datasets import make_point_clouds
 from gtda.homology import VietorisRipsPersistence
@@ -58,32 +59,43 @@ def normalize_matrix(M):
     return new_matrix / d_norm
 
 
-weights = [[[b.item() for b in a] for a in e[0]] for e in model["conv1.weight"]]
+weights = []
+for filename in os.listdir("models"):
+    model = model = torch.load(f"models/{filename}")
+    weights += [[[b.item() for b in a] for a in e[0]] for e in model["conv1.weight"]]
 
 weights = [normalize_matrix(M) for M in weights]
 weights = np.array(weights)
 st.write(weights)
-dist = lambda u, v: np.linalg.norm((u - v), "fro")
-distances = []
-for u in weights:
-    row = []
-    for v in weights:
-        row.append(dist(u, v))
-    distances.append(row)
-
-distances = np.array(distances)
-
-st.write(distances)
 
 
-VR = VietorisRipsPersistence(homology_dimensions=[0, 1, 2], metric="precomputed")
-diagrams = VR.fit_transform(distances[None, :, :])
-st.write(diagrams.shape)
-st.write(diagrams)
+@st.experimental_singleton
+def calc_dist(weights):
+    dist = lambda u, v: np.linalg.norm((u - v), "fro")
+    distances = []
+    for u in weights:
+        row = []
+        for v in weights:
+            row.append(dist(u, v))
+        distances.append(row)
+
+    distances = np.array(distances)
+    return distances
+
+
+distances = calc_dist(weights)
+
+# st.write(distances)
+
+
+# VR = VietorisRipsPersistence(homology_dimensions=[0, 1, 2], metric="precomputed")
+# diagrams = VR.fit_transform(distances[None, :, :])
+# st.write(diagrams.shape)
+# st.write(diagrams)
 
 from gtda.plotting import plot_diagram
 
-st.plotly_chart(plot_diagram(diagrams[0]))
+# st.plotly_chart(plot_diagram(diagrams[0]))
 
 # st.plotly_chart(plot_point_cloud(weights))
 
@@ -91,7 +103,7 @@ filter_func = Projection(columns=project)
 # Define cover
 cover = CubicalCover(n_intervals=n_intervals, overlap_frac=param)
 # Choose clustering algorithm – default is DBSCAN
-clusterer = DBSCAN(eps=10)
+clusterer = DBSCAN()
 
 # Configure parallelism of clustering step
 n_jobs = 1
@@ -105,7 +117,7 @@ pipe = make_mapper_pipeline(
     n_jobs=n_jobs,
 )
 thing = np.array([element.reshape(9) for element in weights])
-st.write(thing)
+# st.write(thing)
 fig = plot_static_mapper_graph(pipe, thing)
 st.plotly_chart(fig)
 
