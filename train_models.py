@@ -134,9 +134,6 @@ def main(i):
         help="quickly check a single pass",
     )
     parser.add_argument(
-        "--seed", type=int, default=1, metavar="S", help="random seed (default: 1)"
-    )
-    parser.add_argument(
         "--log-interval",
         type=int,
         default=10,
@@ -151,8 +148,6 @@ def main(i):
     )
     args = parser.parse_args()
     use_cuda = not args.no_cuda and torch.cuda.is_available()
-
-    torch.manual_seed(args.seed)
 
     device = torch.device("cuda" if use_cuda else "cpu")
 
