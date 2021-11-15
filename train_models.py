@@ -6,6 +6,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
+from joblib import Parallel, delayed, cpu_count
 
 
 class Net(nn.Module):
@@ -183,6 +184,9 @@ def main(i):
 
 
 if __name__ == "__main__":
-    for i in range(100):
-        main(i)
+    number_of_cores = cpu_count()
+    model = Net()
+    test = "test"
+    torch.save(model.state_dict(), f"models/mnist_cnn_{test}.pt")
+    Parallel(n_jobs=number_of_cores)(delayed(main)(i) for i in range(100))
 
