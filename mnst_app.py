@@ -12,6 +12,7 @@ from gtda.mapper import (
     plot_interactive_mapper_graph,
     MapperInteractivePlotter,
 )
+from sklearn.decomposition import PCA
 import scipy
 import numpy as np
 
@@ -59,12 +60,27 @@ def normalize_matrix(M):
     return new_matrix / d_norm
 
 
+def change_basis(list_of_mat):
+    e_1 = (1/np.sqrt(6))*np.array([1,0,-1,1,0,-1,1,0,-1])
+    e_2 = (1/np.sqrt(6))*np.array([1, 1, 1, 0, 0, 0, -1, -1, -1])
+    e_3 = (1/np.sqrt(54))*np.array([1, -2, 1, 1, -2, 1, 1, -2, 1])
+    e_4 = (1/np.sqrt(54))*np.array([1, 1, 1, -2, -2, -2, 1, 1, 1])
+    e_5 = (1/np.sqrt(8))*np.array([1, 0, -1, 0, 0, 0, -1, 0, 1])
+    e_6 = (1/np.sqrt(48))*np.array([1, 0, -1, -2, 0, 2, 1, 0, -1])
+    e_7 = (1/np.sqrt(48))*np.array([1, -2, 1, 0, 0, 0, -1, 2, -1])
+    e_8 = (1/np.sqrt(216))*np.array([1, -2, 1, -2, 4, -2, 1, -2, 1])
+    basis = [e_1, e_2, e_3, e_4, e_5, e_6, e_7, e_8]
+    A = np.array(basis)
+    V = np.diag([1/np.linalg.norm(b)**2 for b in basis])
+    return [(V @ A @ M.reshape((9, 1))).T[0] for M in list_of_mat]
+
+
 weights = []
 for filename in os.listdir("models"):
-    model = model = torch.load(f"models/{filename}")
+    model = torch.load(f"models/{filename}")
     weights += [[[b.item() for b in a] for a in e[0]] for e in model["conv1.weight"]]
 
-weights = [normalize_matrix(M) for M in weights]
+weights = change_basis([normalize_matrix(M) for M in weights])
 weights = np.array(weights)
 st.write(weights)
 
@@ -83,13 +99,12 @@ def calc_dist(weights):
     return distances
 
 
-distances = calc_dist(weights)
+#distances = calc_dist(weights)
 
-# st.write(distances)
-
-
-VR = VietorisRipsPersistence(homology_dimensions=[0, 1, 2], metric="precomputed")
-diagrams = VR.fit_transform(distances[None, :, :])
+#VR = VietorisRipsPersistence(homology_dimensions=[0, 1], metric="precomputed")
+#diagrams = VR.fit_transform(distances[None, :, :])
+VR = VietorisRipsPersistence(homology_dimensions=[0, 1], metric="cosine")
+diagrams = VR.fit_transform(weights[None, :, :])
 st.write(diagrams.shape)
 # st.write(diagrams)
 
@@ -97,9 +112,9 @@ from gtda.plotting import plot_diagram
 
 st.plotly_chart(plot_diagram(diagrams[0]))
 
-st.plotly_chart(plot_point_cloud(weights))
 
-filter_func = Projection(columns=project)
+#filter_func = Projection(columns=project)
+filter_func = PCA(n_components=2, )
 # Define cover
 cover = CubicalCover(n_intervals=n_intervals, overlap_frac=param)
 # Choose clustering algorithm – default is DBSCAN
@@ -116,8 +131,8 @@ pipe = make_mapper_pipeline(
     verbose=False,
     n_jobs=n_jobs,
 )
-thing = np.array([element.reshape(9) for element in weights])
+#thing = np.array([element.reshape(9) for element in weights])
 # st.write(thing)
-fig = plot_static_mapper_graph(pipe, thing)
+fig = plot_static_mapper_graph(pipe, weights)
 st.plotly_chart(fig)
 

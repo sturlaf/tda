@@ -55,7 +55,7 @@ def calc_dist(weights):
 distances = calc_dist(weights)
 
 
-VR = VietorisRipsPersistence(homology_dimensions=[0, 1, 2], metric="precomputed")
+VR = VietorisRipsPersistence(homology_dimensions=[0, 1], metric="precomputed")
 diagrams = VR.fit_transform(distances[None, :, :])
 
 plot_diagram(diagrams[0])
