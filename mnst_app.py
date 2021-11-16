@@ -88,16 +88,16 @@ distances = calc_dist(weights)
 # st.write(distances)
 
 
-# VR = VietorisRipsPersistence(homology_dimensions=[0, 1, 2], metric="precomputed")
-# diagrams = VR.fit_transform(distances[None, :, :])
-# st.write(diagrams.shape)
+VR = VietorisRipsPersistence(homology_dimensions=[0, 1, 2], metric="precomputed")
+diagrams = VR.fit_transform(distances[None, :, :])
+st.write(diagrams.shape)
 # st.write(diagrams)
 
 from gtda.plotting import plot_diagram
 
-# st.plotly_chart(plot_diagram(diagrams[0]))
+st.plotly_chart(plot_diagram(diagrams[0]))
 
-# st.plotly_chart(plot_point_cloud(weights))
+st.plotly_chart(plot_point_cloud(weights))
 
 filter_func = Projection(columns=project)
 # Define cover
