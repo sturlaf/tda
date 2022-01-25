@@ -3,7 +3,6 @@ import streamlit as st
 import torch
 from sklearn.cluster import DBSCAN
 from gtda.plotting import plot_diagram
-from gtda.plotting import plot_point_cloud
 from gtda.mapper import (
     CubicalCover,
     make_mapper_pipeline,
@@ -15,18 +14,32 @@ from gtda.mapper import (
 from sklearn.decomposition import PCA
 import scipy
 import numpy as np
+from gtda.plotting import plot_diagram
+from umap import UMAP
+from gtda.homology import VietorisRipsPersistence
+from itertools import product
 
 st.set_page_config(layout="wide")
 with st.sidebar:
     param = st.slider(
-        "Select param", min_value=0.01, max_value=1.0, value=0.3, step=0.01
+        "Select param", min_value=0.01, max_value=1.0, value=0.6, step=0.01
     )
-    project = st.slider("Select col to project onto", min_value=0, max_value=8, value=0)
+    n_components = st.slider(
+        "Select number of PCA components", min_value=1, max_value=3, value=1
+    )
     n_intervals = st.slider(
-        "Select nr of clusters", min_value=2, max_value=300, value=12
+        "Select nr of intervals", min_value=2, max_value=500, value=150
     )
-from data.generate_datasets import make_point_clouds
-from gtda.homology import VietorisRipsPersistence
+    umap_components = st.slider(
+        "Select nr of umap_components", min_value=1, max_value=8, value=3
+    )
+    epsilon = st.slider(
+        "Select eps for DBSCAN", min_value=0.0, max_value=1.0, value=0.1, step=0.01
+    )
+    metric = st.selectbox(
+        label="Select the metric to use for presistent homology",
+        options=["euclidean", "cosine", "precomputed"],
+    )
 
 PATH = "mnist_cnn.pt"
 
@@ -61,34 +74,51 @@ def normalize_matrix(M):
 
 
 def change_basis(list_of_mat):
-    e_1 = (1/np.sqrt(6))*np.array([1,0,-1,1,0,-1,1,0,-1])
-    e_2 = (1/np.sqrt(6))*np.array([1, 1, 1, 0, 0, 0, -1, -1, -1])
-    e_3 = (1/np.sqrt(54))*np.array([1, -2, 1, 1, -2, 1, 1, -2, 1])
-    e_4 = (1/np.sqrt(54))*np.array([1, 1, 1, -2, -2, -2, 1, 1, 1])
-    e_5 = (1/np.sqrt(8))*np.array([1, 0, -1, 0, 0, 0, -1, 0, 1])
-    e_6 = (1/np.sqrt(48))*np.array([1, 0, -1, -2, 0, 2, 1, 0, -1])
-    e_7 = (1/np.sqrt(48))*np.array([1, -2, 1, 0, 0, 0, -1, 2, -1])
-    e_8 = (1/np.sqrt(216))*np.array([1, -2, 1, -2, 4, -2, 1, -2, 1])
+    e_1 = (1 / np.sqrt(6)) * np.array([1, 0, -1, 1, 0, -1, 1, 0, -1])
+    e_2 = (1 / np.sqrt(6)) * np.array([1, 1, 1, 0, 0, 0, -1, -1, -1])
+    e_3 = (1 / np.sqrt(54)) * np.array([1, -2, 1, 1, -2, 1, 1, -2, 1])
+    e_4 = (1 / np.sqrt(54)) * np.array([1, 1, 1, -2, -2, -2, 1, 1, 1])
+    e_5 = (1 / np.sqrt(8)) * np.array([1, 0, -1, 0, 0, 0, -1, 0, 1])
+    e_6 = (1 / np.sqrt(48)) * np.array([1, 0, -1, -2, 0, 2, 1, 0, -1])
+    e_7 = (1 / np.sqrt(48)) * np.array([1, -2, 1, 0, 0, 0, -1, 2, -1])
+    e_8 = (1 / np.sqrt(216)) * np.array([1, -2, 1, -2, 4, -2, 1, -2, 1])
     basis = [e_1, e_2, e_3, e_4, e_5, e_6, e_7, e_8]
     A = np.array(basis)
-    V = np.diag([1/np.linalg.norm(b)**2 for b in basis])
-    return [(V @ A @ M.reshape((9, 1))).T[0] for M in list_of_mat]
-
-
-weights = []
-for filename in os.listdir("models"):
-    model = torch.load(f"models/{filename}")
-    weights += [[[b.item() for b in a] for a in e[0]] for e in model["conv1.weight"]]
-
-weights = change_basis([normalize_matrix(M) for M in weights])
-weights = np.array(weights)
-st.write(weights)
+    V = np.diag([1 / np.linalg.norm(b) ** 2 for b in basis])
+    return np.array([(V @ A @ M.reshape((9, 1))).T[0] for M in list_of_mat])
 
 
 @st.experimental_singleton
+def load_weights():
+    weights = []
+    for filename in os.listdir("models"):
+        model = torch.load(f"models/{filename}")
+        weights += [
+            [[b.item() for b in a] for a in e[0]] for e in model["conv1.weight"]
+        ]
+    return change_basis(map(normalize_matrix, weights))
+
+
+weights = load_weights()
+with st.expander("Show weights"):
+    st.write(weights)
+
+
+def NormalizedSquaredEuclideanDistance(u, v):
+    mean_u = u - np.mean(u)
+    mean_v = v - np.mean(v)
+    teller = np.linalg.norm(mean_u - mean_v) ** 2
+    nevner = np.linalg.norm(mean_u) ** 2 + np.linalg.norm(mean_v) ** 2
+    return 0.5 * teller / nevner
+
+
+# @st.experimental_singleton
 def calc_dist(weights):
-    dist = lambda u, v: np.linalg.norm((u - v), "fro")
+    dist = lambda u, v: NormalizedSquaredEuclideanDistance(
+        u, v
+    )  # np.linalg.norm((u - v), "fro")
     distances = []
+    # return np.array(list(map(dist, product(weights, repeat=2))))
     for u in weights:
         row = []
         for v in weights:
@@ -99,29 +129,35 @@ def calc_dist(weights):
     return distances
 
 
-#distances = calc_dist(weights)
+def calculate_persistence(weights, n_components=3, umap=True, metric="euclidean"):
+    if metric == "precomputed":
+        weights = calc_dist(weights)
+    elif umap:
+        reducer = UMAP(n_components=n_components, metric=metric)
+        weights = reducer.fit_transform(weights)
 
-#VR = VietorisRipsPersistence(homology_dimensions=[0, 1], metric="precomputed")
-#diagrams = VR.fit_transform(distances[None, :, :])
-VR = VietorisRipsPersistence(homology_dimensions=[0, 1], metric="cosine")
-diagrams = VR.fit_transform(weights[None, :, :])
-st.write(diagrams.shape)
-# st.write(diagrams)
-
-from gtda.plotting import plot_diagram
-
-st.plotly_chart(plot_diagram(diagrams[0]))
+    VR = VietorisRipsPersistence(homology_dimensions=[0, 1], metric=metric)
+    diagrams = VR.fit_transform(weights[None, :, :])
+    return diagrams
 
 
-#filter_func = Projection(columns=project)
-filter_func = PCA(n_components=2, )
+calculate = st.checkbox("Calculate persistence")
+if calculate:
+    diagrams = calculate_persistence(weights, umap_components, metric=metric)
+    st.write(diagrams.shape)
+    # st.write(diagrams)
+    st.plotly_chart(plot_diagram(diagrams[0]))
+
+
+# filter_func = Projection(columns=project)
+filter_func = PCA(n_components=n_components)
 # Define cover
 cover = CubicalCover(n_intervals=n_intervals, overlap_frac=param)
 # Choose clustering algorithm – default is DBSCAN
-clusterer = DBSCAN()
+clusterer = DBSCAN(eps=10, metric=NormalizedSquaredEuclideanDistance)
 
 # Configure parallelism of clustering step
-n_jobs = 1
+n_jobs = 2
 
 # Initialise pipeline
 pipe = make_mapper_pipeline(
@@ -131,7 +167,7 @@ pipe = make_mapper_pipeline(
     verbose=False,
     n_jobs=n_jobs,
 )
-#thing = np.array([element.reshape(9) for element in weights])
+# thing = np.array([element.reshape(9) for element in weights])
 # st.write(thing)
 fig = plot_static_mapper_graph(pipe, weights)
 st.plotly_chart(fig)
