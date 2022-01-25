@@ -18,6 +18,7 @@ from gtda.plotting import plot_diagram
 from umap import UMAP
 from gtda.homology import VietorisRipsPersistence
 from itertools import product
+from test_approach import make_matricies
 
 st.set_page_config(layout="wide")
 with st.sidebar:
@@ -99,7 +100,8 @@ def load_weights():
     return change_basis(map(normalize_matrix, weights))
 
 
-weights = load_weights()
+# weights = load_weights()
+weights = make_matricies(100 * 64)
 with st.expander("Show weights"):
     st.write(weights)
 
@@ -143,7 +145,12 @@ def calculate_persistence(weights, n_components=3, umap=True, metric="euclidean"
 
 calculate = st.checkbox("Calculate persistence")
 if calculate:
-    diagrams = calculate_persistence(weights, umap_components, metric=metric)
+    # diagrams = calculate_persistence(weights, umap_components, metric=metric)
+    diagrams = calculate_persistence(
+        np.array([element.reshape(9) for element in weights]),
+        umap_components,
+        metric=metric,
+    )
     st.write(diagrams.shape)
     # st.write(diagrams)
     st.plotly_chart(plot_diagram(diagrams[0]))
@@ -167,7 +174,7 @@ pipe = make_mapper_pipeline(
     verbose=False,
     n_jobs=n_jobs,
 )
-# thing = np.array([element.reshape(9) for element in weights])
+weights = np.array([element.reshape(9) for element in weights])
 # st.write(thing)
 fig = plot_static_mapper_graph(pipe, weights)
 st.plotly_chart(fig)
