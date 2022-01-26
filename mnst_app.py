@@ -137,7 +137,7 @@ def calculate_persistence(weights, n_components=3, umap=True, metric="euclidean"
     elif umap:
         reducer = UMAP(n_components=n_components, metric=metric)
         weights = reducer.fit_transform(weights)
-
+        
     VR = VietorisRipsPersistence(homology_dimensions=[0, 1], metric=metric)
     diagrams = VR.fit_transform(weights[None, :, :])
     return diagrams
