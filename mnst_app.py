@@ -102,7 +102,7 @@ def load_weights():
 
 
 weights = load_weights()
-#weights = make_matricies(100 * 64)
+# weights = make_matricies(100 * 64)
 with st.expander("Show weights"):
     st.write(weights)
 
@@ -135,12 +135,12 @@ def calc_dist(weights):
 
 def calculate_persistence(weights, n_components=3, umap=True, metric="euclidean"):
     if metric == "precomputed":
-        #weights = calc_dist(weights)
-        weights = pickle.load( open("distances.p", "rb"))
+        # weights = calc_dist(weights)
+        weights = pickle.load(open("distances.p", "rb"))
     elif umap:
         reducer = UMAP(n_components=n_components, metric=metric)
         weights = reducer.fit_transform(weights)
-        
+
     VR = VietorisRipsPersistence(homology_dimensions=[0, 1], metric=metric)
     diagrams = VR.fit_transform(weights[None, :, :])
     return diagrams
@@ -149,11 +149,11 @@ def calculate_persistence(weights, n_components=3, umap=True, metric="euclidean"
 calculate = st.checkbox("Calculate persistence")
 if calculate:
     diagrams = calculate_persistence(weights, umap_components, metric=metric)
-    #diagrams = calculate_persistence(
-       # np.array([element.reshape(9) for element in weights]),
-        #umap_components,
-       # metric=metric,
-    #)
+    # diagrams = calculate_persistence(
+    # np.array([element.reshape(9) for element in weights]),
+    # umap_components,
+    # metric=metric,
+    # )
     st.write(diagrams.shape)
     # st.write(diagrams)
     st.plotly_chart(plot_diagram(diagrams[0]))
@@ -177,8 +177,7 @@ pipe = make_mapper_pipeline(
     verbose=False,
     n_jobs=n_jobs,
 )
-#weights = np.array([element.reshape(9) for element in weights])
+# weights = np.array([element.reshape(9) for element in weights])
 # st.write(thing)
 fig = plot_static_mapper_graph(pipe, weights)
 st.plotly_chart(fig)
-

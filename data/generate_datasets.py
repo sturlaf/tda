@@ -12,7 +12,7 @@ def make_point_clouds(n_samples_per_shape: int, n_points: int, noise: float):
                     np.cos(t) + noise * (np.random.rand(1)[0] - 0.5),
                     0,
                 ]
-                for t in range((n_points ** 2))
+                for t in range((n_points**2))
             ]
         )
         for kk in range(n_samples_per_shape)
