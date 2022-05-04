@@ -12,13 +12,16 @@ from sklearn.preprocessing import StandardScaler
 def calculate_persistence(
     cluster, num_of_neurons, maxdim=1, coeff=47, num_longest_bars=10
 ):
-    layout = UMAP(
-        n_components=num_of_neurons,
-        verbose=True,
-        n_neighbors=20,
-        min_dist=0.01,
-        metric="cosine",
-    ).fit_transform(cluster)
+    if cluster.shape[0] > 4000:
+        layout = UMAP(
+            n_components=num_of_neurons,
+            verbose=True,
+            n_neighbors=20,
+            min_dist=0.01,
+            metric="cosine",
+        ).fit_transform(cluster)
+    else:
+        layout = cluster
     distance = squareform(pdist(layout, "euclidean"))
     thresh = np.max(distance[~np.isinf(distance)])
     diagrams = ripser(
