@@ -155,3 +155,4 @@ cython_debug/
 .DS_Store
 /html_files/
 /pdf_files/
+/.vscode/

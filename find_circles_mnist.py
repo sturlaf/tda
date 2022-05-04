@@ -6,6 +6,7 @@ from umap import UMAP
 from fix_umap_bug import fix_umap_bug
 import pandas as pd
 from tqdm import tqdm
+from sklearn.preprocessing import StandardScaler
 
 
 def calculate_persistence(
@@ -39,20 +40,24 @@ def calculate_persistence(
 
 
 def cluster_activity(activity, num_of_neurons):
-
+    """
     layout = UMAP(
         n_components=num_of_neurons,
         verbose=True,
-        n_neighbors=10,
+        n_neighbors=15,
         min_dist=0.01,
         metric="cosine",
     ).fit_transform(activity)
+    """
+    layout = activity
+
     # logDTM, DTM, ‘KDE’ or ‘logKDE’
     return Tomato(density_type="logDTM", k=200).fit_predict(layout)
 
 
 def find_circles(layer):
-    activity = np.load(f"activations/MNIST/{layer}.npy")
+    activity = np.load(f"activations/MNIST/{layer}.npy")  # [:4096]
+    # activity = StandardScaler().fit_transform(activity)
     num_of_neurons = activity.shape[1]
     clustering = cluster_activity(activity=activity, num_of_neurons=num_of_neurons)
     unique, counts = np.unique(clustering, return_counts=True)
