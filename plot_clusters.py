@@ -13,7 +13,7 @@ import plotly.graph_objects as go
 
 
 def plot_persistance_clusters(layer, num_clusters=5, filename="persistance_clusters"):
-    df = pd.read_pickle(f"data/clusters/{layer}.pkl")
+    df = pd.read_pickle(f"activations/clusters/{layer}.pkl")
     df = df.head(num_clusters)
     activity = np.load(f"activations/MNIST/{layer}.npy")
     num_of_neurons = activity.shape[1]
