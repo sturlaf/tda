@@ -44,7 +44,6 @@ def calculate_persistence(
 
 
 def cluster_activity(activity, num_of_neurons):
-    """
     layout = UMAP(
         n_components=num_of_neurons,
         verbose=True,
@@ -52,7 +51,6 @@ def cluster_activity(activity, num_of_neurons):
         min_dist=0.01,
         metric="cosine",
     ).fit_transform(activity)
-    """
     layout = activity
 
     # logDTM, DTM, ‘KDE’ or ‘logKDE’
