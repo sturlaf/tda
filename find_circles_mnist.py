@@ -6,23 +6,19 @@ from umap import UMAP
 from fix_umap_bug import fix_umap_bug
 import pandas as pd
 from tqdm import tqdm
-from sklearn.preprocessing import StandardScaler
 
 
 def calculate_persistence(
     cluster, num_of_neurons, maxdim=1, coeff=47, num_longest_bars=10
 ):
     print(cluster.shape[0])
-    if cluster.shape[0] < 4000:
-        layout = UMAP(
-            n_components=num_of_neurons,
-            verbose=True,
-            n_neighbors=20,
-            min_dist=0.01,
-            metric="cosine",
-        ).fit_transform(cluster)
-    else:
-        layout = cluster
+    layout = UMAP(
+        n_components=num_of_neurons,
+        verbose=True,
+        n_neighbors=20,
+        min_dist=0.01,
+        # metric="cosine",
+    ).fit_transform(cluster)
     distance = squareform(pdist(layout, "euclidean"))
     thresh = np.max(distance[~np.isinf(distance)])
     diagrams = ripser(
@@ -43,27 +39,27 @@ def calculate_persistence(
         return lives1
 
 
-def cluster_activity(activity, num_of_neurons):
+def cluster_activity(activity):
     layout = UMAP(
-        n_components=num_of_neurons,
+        n_components=activity.shape[1],
         verbose=True,
         n_neighbors=15,
         min_dist=0.01,
-        metric="cosine",
+        # metric="cosine",
     ).fit_transform(activity)
-    layout = activity
-
     # logDTM, DTM, ‘KDE’ or ‘logKDE’
-    return Tomato(density_type="logDTM", k=200).fit_predict(layout)
+    n_clusters = activity.shape[0] // 1500  # avrage cluster size is 1500
+    return Tomato(density_type="logDTM", k=200, n_clusters=n_clusters).fit_predict(
+        layout
+    )
 
 
 def find_circles(layer):
     activity = np.load(f"activations/MNIST/{layer}.npy")  # [:4096]
     # activity = StandardScaler().fit_transform(activity)
-    num_of_neurons = activity.shape[1]
-    clustering = cluster_activity(activity=activity, num_of_neurons=num_of_neurons)
+    large_cluster_size = activity.shape[1]
+    clustering = cluster_activity(activity=activity)
     unique, counts = np.unique(clustering, return_counts=True)
-    large_cluster_size = num_of_neurons
     large_clusters = [
         unique[i] for i, count in enumerate(counts) if count > large_cluster_size
     ]
@@ -85,7 +81,7 @@ def find_circles(layer):
         )
         longest_bars = calculate_persistence(
             cluster=activity[cluster_members],
-            num_of_neurons=num_of_neurons,
+            num_of_neurons=activity.shape[1],
             coeff=coeff,
             num_longest_bars=num_longest_bars,
         )
