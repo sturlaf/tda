@@ -8,6 +8,61 @@ from joblib import Parallel, delayed
 from itertools import chain
 from collections import Counter
 
+# from Utils.plotting import scatter_plot
+def comp_circ_coords(
+    data,
+    diagram,
+    inds,
+    dists,
+    cocycles,
+    coeff=47,
+    do_phi=False,
+    method="perea",
+    perc_thresh=0.99,
+    circs=[0],
+    bool_plot=True,
+    pos=[],
+    plot_inds=[],
+):
+    # COMPUTE CIRCULAR COORDINATES OF MOST PERSISTENT CLASS
+    births1 = diagram[1][:, 0]  # the time of birth for the 1-dim classes
+    deaths1 = diagram[1][:, 1]  # the time of death for the 1-dim classes
+    lives1 = deaths1 - births1  # the lifetime for the 1-dim classes
+    iMax = np.argsort(lives1)
+    num_circ = len(circs)
+    num_times, num_dim = np.shape(data)
+    circ_coord = np.zeros((num_circ, num_times))
+    for c in circs:
+        cocycle = np.array(cocycles[iMax[-(c + 1)]])
+        threshold = (
+            births1[iMax[-(c + 1)]]
+            + (deaths1[iMax[-(c + 1)]] - births1[iMax[-(c + 1)]]) * 0.99
+        )
+
+        f0, circ_coord[c, :] = compute_coordinates(
+            data, dists, cocycle, threshold, inds, coeff, method, [], do_phi=do_phi
+        )
+        if bool_plot:
+            if len(plot_inds) == 0:
+                plot_inds = np.arange(num_times)
+            if len(pos) > 0:
+                plt.scatter(
+                    pos[plot_inds, :],
+                    dims=[0, 1],
+                    c=circ_coord[c, plot_inds] % 1,
+                    col="hsv",
+                    tit="Path, circ #" + str(c),
+                )
+
+            plt.scatter(
+                data[plot_inds, :],
+                dims=range(min(num_dim, 3)),
+                c=circ_coord[c, plot_inds] % 1,
+                col="hsv",
+                tit="Point cloud, circ #" + str(c),
+            )
+    return circ_coord
+
 
 def get_coords(
     cocycle,
@@ -78,6 +133,57 @@ def get_weights_graph(A, values, edges, verts, dists, num_edges, num_verts):
     col = np.zeros((num_edges,), dtype=int)
     G = np.zeros((num_verts, num_verts))
     edgewhere = np.zeros((num_verts, num_verts), dtype=int)
+    nextv = np.zeros((num_verts, num_verts), dtype=int)
+    nextv[:] = -1
+    L = np.zeros((num_edges,))
+    distpo = np.zeros((num_verts, num_verts))
+    for e in range(num_edges):
+        if B[e] >= 0:
+            e0 = np.where(verts == edges[0][e])[0]
+            e1 = np.where(verts == edges[1][e])[0]
+        else:
+            e0 = np.where(verts == edges[1][e])[0]
+            e1 = np.where(verts == edges[0][e])[0]
+        row[e] = e0
+        col[e] = e1
+        G[e0, e1] = dists[verts[e0], verts[e1]]
+        distpo[e0, e1] = 1 / np.power(dists[verts[e0], verts[e1]], 2)
+        edgewhere[e0, e1] = e
+        nextv[e0, e1] = e1
+
+    G[G == 0] = np.inf
+    it = 0
+    for k in range(num_verts):
+        for i in range(num_verts):
+            for j in range(num_verts):
+                if G[i, j] > (G[i, k] + G[k, j]):
+                    it = it + 1
+                    G[i, j] = G[i, k] + G[k, j]
+                    nextv[i, j] = nextv[i, k]
+
+    for e in range(num_edges):
+        it = 0
+        i = nextv[col[e], row[e]]
+        j = col[e]
+        while i != row[e] and i != -1 and it <= 10000:
+            it = it + 1
+            L[edgewhere[j, i]] = L[edgewhere[j, i]] + distpo[j, i]
+            j = i
+            i = nextv[i, row[e]]
+        L[edgewhere[j, i]] = L[edgewhere[j, i]] + distpo[j, i]
+        L[e] = L[e] + distpo[row[e], col[e]]
+    return L
+
+
+"""
+
+def get_weights_graph(A, values, edges, verts, dists, num_edges, num_verts):
+    f0 = lsmr(-1 * A, values)[0]
+    B = values + np.dot(A, f0)
+    row = np.zeros((num_edges,), dtype=int)
+    col = np.zeros((num_edges,), dtype=int)
+    G = np.zeros((num_verts, num_verts))
+    edgewhere = np.zeros((num_verts, num_verts), dtype=int)
     # nextv = np.zeros((num_verts, num_verts), dtype=int)
     # nextv[:] = -1
     L = np.zeros((num_edges,))
@@ -97,7 +203,7 @@ def get_weights_graph(A, values, edges, verts, dists, num_edges, num_verts):
         edgewhere[e0, e1] = e
         # nextv[e0, e1] = e1
         # L[e] = distpo[e0, e1]
-    """
+    
     G[G == 0] = np.inf
     it = 0
     for k in range(num_verts):
@@ -119,7 +225,7 @@ def get_weights_graph(A, values, edges, verts, dists, num_edges, num_verts):
             i = nextv[i, row[e]]
         L[edgewhere[j, i]] = L[edgewhere[j, i]] + distpo[j, i]
         # L[e] = L[e] + distpo[row[e], col[e]]
-    """
+    
     G, nextv = floyd_warshall(csgraph=G, directed=False, return_predecessors=True)
     paths = Parallel(n_jobs=3)(
         delayed(traverse_paths)(
@@ -147,6 +253,8 @@ def traverse_paths(start, end, edgewhere, nextv):
     path.append(edgewhere[i, j])
 
     return path
+
+"""
 
 
 def get_weights_perea(edges, dists, threshold, num_edges):

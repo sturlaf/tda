@@ -1,7 +1,6 @@
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy import sparse
 import numpy as np
-from fix_umap_bug import fix_umap_bug
 from umap import UMAP
 
 
