@@ -13,7 +13,7 @@ from cosine_hack import umap_hack
 def calc_info_circles(layer, method="perea"):
     activity = np.load(f"activations/MNIST/{layer}.npy")
     num_of_neurons = activity.shape[1]
-    cluster_info = pd.read_pickle(f"data/clusters/{layer}.pkl")
+    cluster_info = pd.read_pickle(f"activations/clusters/{layer}.pkl")
     coeff = 47
     circle_params = []
     info_per_nodes = []
