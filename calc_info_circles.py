@@ -1,7 +1,6 @@
 import numpy as np
 from ripser import ripser
 from scipy.spatial.distance import pdist, squareform
-from gudhi.clustering.tomato import Tomato
 from umap import UMAP
 from fix_umap_bug import fix_umap_bug
 import pandas as pd
@@ -12,7 +11,7 @@ from cosine_hack import umap_hack
 
 
 def calc_info_circles(layer, method="perea"):
-    activity = np.load(f"activations/ILSVRC2015/{layer}.npy")
+    activity = np.load(f"activations/MNIST/{layer}.npy")
     num_of_neurons = activity.shape[1]
     cluster_info = pd.read_pickle(f"data/clusters/{layer}.pkl")
     coeff = 47
