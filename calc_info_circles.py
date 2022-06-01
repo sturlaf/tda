@@ -16,7 +16,7 @@ def calc_info_circles(layer, method="perea"):
     cluster_info = pd.read_pickle(f"activations/clusters/{layer}.pkl")
     coeff = 47
     circle_params = []
-    info_per_nodes = []
+    # info_per_nodes = []
     pbar = tqdm(total=len(cluster_info))
     for index, row in cluster_info.iterrows():
         cluster = activity[row["cluster_members"]]
@@ -31,7 +31,7 @@ def calc_info_circles(layer, method="perea"):
                 )
             except KeyError:
                 circle_params.append([])
-                info_per_nodes.append([])
+                # info_per_nodes.append([])
                 continue
         else:
             layout = UMAP(
@@ -66,14 +66,14 @@ def calc_info_circles(layer, method="perea"):
             bool_smooth_circle=method,  # "graph", "old", "perea"
         )
         circle_params.append(f)
-        information_per_node = information_rate(
-            cluster=cluster, theta=f, neurons=num_of_neurons
-        )
-        info_per_nodes.append(information_per_node)
+        # information_per_node = information_rate(
+        #    cluster=cluster, theta=f, neurons=num_of_neurons
+        # )
+        # info_per_nodes.append(information_per_node)
         pbar.update(1)
     pbar.close()
     cluster_info = cluster_info.assign(circle_param=circle_params)
-    cluster_info = cluster_info.assign(info_per_node=info_per_nodes)
+    # cluster_info = cluster_info.assign(info_per_node=info_per_nodes)
     return cluster_info
 
 
